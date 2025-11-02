@@ -79,6 +79,11 @@
 #' # Force re-download to get latest version
 #' dataset_fresh <- get_dataset("0001", force_download = TRUE)
 #'
+#' 
+#' \dontshow{
+#' # cleanup
+#' clear_cache(force = TRUE)
+#' }
 #' }
 #'
 #' @export
@@ -116,6 +121,8 @@ get_dataset <- function(dataset_id,
   dataset_info <- all_datasets[all_datasets[["dataset_id"]] == dataset_id, ]
   
   author_lower <- tolower(dataset_info$first_author)
+  # remove whitespace
+  author_lower <- gsub(" ", "", author_lower)
   
   # construct path to individual metadata file in cached Zenodo structure
   metadata_filename <- paste0(dataset_id, "_", author_lower, "_metadata.json")
