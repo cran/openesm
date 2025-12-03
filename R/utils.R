@@ -176,6 +176,7 @@ download_with_progress <- function(url, destfile) {
   
   tryCatch({
     response <- httr2::request(url) |>
+      httr2::req_retry(max_tries = 5) |>
       httr2::req_progress() |>
       httr2::req_perform()
     
@@ -295,7 +296,6 @@ process_specific_metadata <- function(raw_meta) {
 #' @param max_attempts Integer, maximum number of retry attempts for Zenodo API calls. Default is 15
 #' @return Character string with path to destination directory containing all extracted metadata
 #' @keywords internal
-#' @importFrom zen4R get_versions
 #' @importFrom cli cli_abort cli_alert_warning
 #' @importFrom httr2 request req_perform resp_body_json resp_status
 #' @importFrom fs dir_exists
@@ -312,7 +312,7 @@ download_metadata_from_zenodo <- function(version = "latest", dest_dir, sandbox 
   
   while (attempt <= max_attempts) {
     tryCatch({
-      data_versions <- suppressMessages(zen4R::get_versions(metadata_doi, sandbox = sandbox))
+      data_versions <- get_zenodo_versions(metadata_doi, sandbox = sandbox)
       
       if (is.data.frame(data_versions) && nrow(data_versions) > 0) {
         break
@@ -343,10 +343,12 @@ download_metadata_from_zenodo <- function(version = "latest", dest_dir, sandbox 
   record_id <- sub(".*zenodo\\.", "", specific_version_doi)
   
   # construct API URL to get file information
-  api_url <- paste0("https://zenodo.org/api/records/", record_id)
+  base_url <- if (sandbox) "https://sandbox.zenodo.org/api" else "https://zenodo.org/api"
+  api_url <- paste0(base_url, "/records/", record_id)
   
   # fetch record details to get file list
   response <- httr2::request(api_url) |>
+    httr2::req_retry(max_tries = 5) |>
     httr2::req_perform()
     
   if (httr2::resp_status(response) != 200) {
